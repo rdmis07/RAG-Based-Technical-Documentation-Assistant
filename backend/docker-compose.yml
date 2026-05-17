@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  rag-assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: rag-doc-assistant
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama3-70b-8192}
+      - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.1}
+      - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-2048}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      - EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-cpu}
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+      - CHROMA_COLLECTION=${CHROMA_COLLECTION:-technical_docs}
+      - RETRIEVAL_TOP_K=${RETRIEVAL_TOP_K:-5}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+    volumes:
+      # Persist ChromaDB data across container restarts
+      - chroma-data:/app/data/chroma_db
+      # Persist feedback
+      - ./data/feedback.json:/app/data/feedback.json
+      # Mount custom docs for ingestion
+      - ./data/sample_docs:/app/data/sample_docs:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  chroma-data:
+    driver: local
