@@ -80,6 +80,7 @@ def document_grading_node(state: RAGState) -> Dict[str, Any]:
         state["filtered_docs"]
     """
     retrieved_docs: List[Dict[str, Any]] = state.get("retrieved_docs", [])
+    return {"filtered_docs": state.get("retrieved_docs", []), "retry_count": state.get("retry_count", 0)}
     query = state.get("rewritten_query") or state.get("original_query", "")
 
     logger.info(

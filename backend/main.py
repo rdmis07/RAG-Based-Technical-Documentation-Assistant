@@ -8,7 +8,14 @@ Self-corrective RAG pipeline built with:
 - sentence-transformers/all-MiniLM-L6-v2 embeddings
 """
 from __future__ import annotations
+import typing
+if hasattr(typing, "TypedDict"):
+    typing.TypedDict.__init_subclass__ = lambda *args, **kwargs: None
+import warnings
+warnings.filterwarnings("ignore")
 
+import logging
+logging.getLogger("unstructured").setLevel(logging.CRITICAL)
 import os
 import time
 from contextlib import asynccontextmanager
@@ -138,6 +145,7 @@ def create_app() -> FastAPI:
             "LangGraph · LangChain · ChromaDB · Groq Llama 3 · sentence-transformers"
         ),
         version="1.0.0",
+        swagger_ui_parameters={"openapiUrlSelect": False},
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",

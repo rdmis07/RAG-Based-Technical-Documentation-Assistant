@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from langchain_community.document_loaders import (
     DirectoryLoader,
     TextLoader,
+    PyPDFLoader,
     UnstructuredHTMLLoader,
     UnstructuredMarkdownLoader,
 )
@@ -27,10 +28,11 @@ LOADER_MAP = {
     ".txt": TextLoader,
     ".html": UnstructuredHTMLLoader,
     ".htm": UnstructuredHTMLLoader,
+    ".pdf": PyPDFLoader
 }
 
 # Glob patterns for DirectoryLoader
-GLOB_PATTERNS = ["**/*.md", "**/*.markdown", "**/*.txt", "**/*.html", "**/*.htm"]
+GLOB_PATTERNS = ["**/*.md", "**/*.markdown", "**/*.txt", "**/*.html", "**/*.htm", "**/*.pdf"]
 
 
 class DocumentLoader:

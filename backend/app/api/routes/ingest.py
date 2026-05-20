@@ -1,66 +1,76 @@
 """
-POST /ingest — document ingestion endpoint.
+POST /ingest — document ingestion endpoint with file upload support.
 """
 from __future__ import annotations
 
 import time
+import os
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
 from app.ingestion.ingestion_pipeline import IngestionPipeline
-from app.models.schemas import IngestRequest, IngestResponse
+from app.models.schemas import IngestResponse
 from app.services.vector_store_service import VectorStoreService
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter()
 
+# Ek temporary folder jahan upload ki hui file save hogi processing ke liye
+UPLOAD_DIR = "data/sample_docs"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post(
     "/ingest",
     response_model=IngestResponse,
-    summary="Ingest documents into ChromaDB",
+    summary="Ingest uploaded document into ChromaDB",
 )
-async def ingest_documents(request: IngestRequest) -> Any:
+async def ingest_documents(
+    file: UploadFile = File(...),
+    collection_name: str = Form("rag-collection"),
+    chunk_size: int = Form(500),
+    chunk_overlap: int = Form(50),
+) -> Any:
     """
-    Load and index documents from a file or directory path.
-
-    Supported file types: `.md`, `.markdown`, `.txt`, `.html`, `.htm`
-
-    The pipeline:
-    1. Loads files using appropriate LangChain document loaders
-    2. Splits into chunks (RecursiveCharacterTextSplitter)
-    3. Generates embeddings (sentence-transformers/all-MiniLM-L6-v2)
-    4. Stores chunks + embeddings in ChromaDB
-
-    **Note:** `source_path` must be accessible from the server's filesystem.
+    Upload a document (PDF, TXT, MD, etc.) and index it into ChromaDB.
     """
     start_time = time.time()
 
     logger.info(
-        "POST /ingest | path=%s | collection=%s | chunk_size=%d",
-        request.source_path,
-        request.collection_name,
-        request.chunk_size,
+        "POST /ingest | filename=%s | collection=%s | chunk_size=%d",
+        file.filename,
+        collection_name,
+        chunk_size,
     )
 
+    # 1. File ko binary mode me temporary save karo
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
     try:
-        vs = VectorStoreService(collection_name=request.collection_name)
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+    except Exception as exc:
+        logger.error("Failed to save uploaded file: %s", exc)
+        raise HTTPException(status_code=500, detail=f"File upload failed: {exc}")
+
+    # 2. Ingestion pipeline chalao saved file par
+    try:
+        vs = VectorStoreService(collection_name=collection_name)
         vs.initialize()
 
         pipeline = IngestionPipeline(
             vector_store_service=vs,
-            chunk_size=request.chunk_size,
-            chunk_overlap=request.chunk_overlap,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
         )
 
         result = pipeline.ingest(
-            source_path=request.source_path,
-            collection_name=request.collection_name,
-            chunk_size=request.chunk_size,
-            chunk_overlap=request.chunk_overlap,
-            recursive=request.recursive,
+            source_path=file_path,
+            collection_name=collection_name,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            recursive=False,
         )
 
     except FileNotFoundError as exc:
@@ -70,6 +80,9 @@ async def ingest_documents(request: IngestRequest) -> Any:
     except Exception as exc:
         logger.error("Ingestion failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Ingestion error: {exc}")
+    finally:
+        # Optional: Kaam hone ke baad temporary file delete karna chaho toh kar sakte ho
+        pass
 
     processing_ms = round((time.time() - start_time) * 1000, 2)
 

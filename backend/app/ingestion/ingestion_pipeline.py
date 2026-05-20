@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
 from app.ingestion.document_loader import DocumentLoader
@@ -111,7 +111,7 @@ class IngestionPipeline:
                 "files_processed": files_processed,
                 "chunks_created": 0,
                 "errors": errors,
-                "collection_name": collection_name or os.getenv("CHROMA_COLLECTION", "technical_docs"),
+                "collection_name": collection_name or "rag-collection",
             }
 
         # ── Split into chunks ─────────────────────────────────
@@ -136,7 +136,7 @@ class IngestionPipeline:
             "files_processed": files_processed,
             "chunks_created": added,
             "errors": errors,
-            "collection_name": collection_name or os.getenv("CHROMA_COLLECTION", "technical_docs"),
+            "collection_name": collection_name or "rag-collection",
         }
         logger.info(
             "Ingestion complete | files=%d | chunks=%d | errors=%d",

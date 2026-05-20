@@ -41,7 +41,7 @@ class LLMService:
                 "Get your key at https://console.groq.com/"
             )
 
-        model = os.getenv("GROQ_MODEL", "llama3-70b-8192")
+        model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant",)
         temperature = float(os.getenv("LLM_TEMPERATURE", "0.1"))
         max_tokens = int(os.getenv("LLM_MAX_TOKENS", "2048"))
 
